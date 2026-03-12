@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Import Transactions - AI Money Tracker{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="h3 mb-4"><i class="bi bi-upload me-2"></i>Import Transactions</h1>
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>CSV Format:</strong> Your file should have columns: <code>date</code>, <code>description</code>, <code>category</code>, <code>amount</code>, <code>type</code>.<br>
+                        Date format: YYYY-MM-DD (or MM/DD/YYYY). Type: <code>income</code> or <code>expense</code>.<br>
+                        <a href="{% url 'download_sample_csv' %}" class="alert-link mt-2 d-inline-block">
+                            <i class="bi bi-download me-1"></i>Download sample CSV template
+                        </a>
+                    </div>
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="id_csv_file" class="form-label">Select CSV File</label>
+                            {{ form.csv_file }}
+                            {% if form.csv_file.errors %}
+                            <div class="invalid-feedback d-block">{{ form.csv_file.errors.0 }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">{{ form.csv_file.help_text }}</small>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-upload me-1"></i> Import
+                            </button>
+                            <a href="{% url 'transaction_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

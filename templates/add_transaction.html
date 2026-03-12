@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Add Transaction - AI Money Tracker{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="h3 mb-4">Add Transaction</h1>
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow">
+                <div class="card-body">
+                    <form method="post" class="needs-validation">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="id_type" class="form-label">Type</label>
+                            {{ form.type }}
+                            {% if form.type.errors %}
+                            <div class="invalid-feedback d-block">{{ form.type.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_amount" class="form-label">Amount (₹)</label>
+                            {{ form.amount }}
+                            {% if form.amount.errors %}
+                            <div class="invalid-feedback d-block">{{ form.amount.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_category" class="form-label">Category</label>
+                            {{ form.category }}
+                            {% if form.category.errors %}
+                            <div class="invalid-feedback d-block">{{ form.category.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_new_category" class="form-label">{{ form.new_category.label }}</label>
+                            {{ form.new_category }}
+                            {% if form.new_category.errors %}
+                            <div class="invalid-feedback d-block">{{ form.new_category.errors.0 }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">Pick from the list above or type a new category (e.g. Entertainment, Healthcare). Optional for income.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_description" class="form-label">Description</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_date" class="form-label">Date</label>
+                            {{ form.date }}
+                            {% if form.date.errors %}
+                            <div class="invalid-feedback d-block">{{ form.date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-plus-circle me-1"></i> Add Transaction
+                            </button>
+                            <a href="{% url 'transaction_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Login - AI Money Tracker{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <h2 class="text-center mb-4">
+                        <i class="bi bi-wallet2 text-primary me-2"></i>AI Money Tracker
+                    </h2>
+                    <h5 class="text-center text-muted mb-4">Sign in to your account</h5>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" name="username" id="username" class="form-control form-control-lg"
+                                   placeholder="Enter username" required autofocus>
+                        </div>
+                        <div class="mb-4">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" name="password" id="password" class="form-control form-control-lg"
+                                   placeholder="Enter password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
+                            <i class="bi bi-box-arrow-in-right me-2"></i> Login
+                        </button>
+                        <p class="text-center mb-0 text-muted">
+                            Don't have an account? <a href="{% url 'register' %}">Register here</a>
+                        </p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

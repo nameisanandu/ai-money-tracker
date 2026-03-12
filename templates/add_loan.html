@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Add Loan - AI Money Tracker{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="h3 mb-4"><i class="bi bi-bank me-2"></i>Add Loan</h1>
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="id_loan_name" class="form-label">Loan Name</label>
+                            {{ form.loan_name }}
+                            {% if form.loan_name.errors %}
+                            <div class="invalid-feedback d-block">{{ form.loan_name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_total_amount" class="form-label">Total Amount (₹)</label>
+                            {{ form.total_amount }}
+                            {% if form.total_amount.errors %}
+                            <div class="invalid-feedback d-block">{{ form.total_amount.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_interest_rate" class="form-label">Interest Rate (% p.a.)</label>
+                            {{ form.interest_rate }}
+                            {% if form.interest_rate.errors %}
+                            <div class="invalid-feedback d-block">{{ form.interest_rate.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_tenure_months" class="form-label">Tenure (months)</label>
+                            {{ form.tenure_months }}
+                            {% if form.tenure_months.errors %}
+                            <div class="invalid-feedback d-block">{{ form.tenure_months.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_emi_amount" class="form-label">EMI Amount (₹)</label>
+                            {{ form.emi_amount }}
+                            {% if form.emi_amount.errors %}
+                            <div class="invalid-feedback d-block">{{ form.emi_amount.errors.0 }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">You can compute this externally and enter here; the app will use it to generate the EMI schedule.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_start_date" class="form-label">Start Date</label>
+                            {{ form.start_date }}
+                            {% if form.start_date.errors %}
+                            <div class="invalid-feedback d-block">{{ form.start_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Save Loan
+                            </button>
+                            <a href="{% url 'loan_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Money Tracker{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Income</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">₹{{ total_income|floatformat:2 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-arrow-down-circle text-primary fs-2"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Total Expense</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">₹{{ total_expense|floatformat:2 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-arrow-up-circle text-danger fs-2"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Balance</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">₹{{ balance|floatformat:2 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-wallet2 text-success fs-2"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Total Monthly EMI</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">₹{{ total_monthly_emi|floatformat:2 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-cash-coin text-warning fs-2"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Budget Progress & Prediction Row -->
+    <div class="row mb-4">
+        {% if budget_amount %}
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary"><i class="bi bi-piggy-bank me-2"></i>Monthly Budget</h6>
+                    <a href="{% url 'set_budget' %}" class="btn btn-sm btn-outline-primary">Edit Budget</a>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Budget: ₹{{ budget_amount|floatformat:2 }}</span>
+                        <span>Spent: ₹{{ budget_spent|floatformat:2 }}</span>
+                        <span>Remaining: ₹{{ budget_remaining|floatformat:2 }}</span>
+                    </div>
+                    {% if budget_alert %}
+                    <div class="alert alert-{{ budget_alert }} py-2 mb-2" role="alert">
+                        {% if budget_alert == 'danger' %}
+                        <i class="bi bi-exclamation-triangle me-1"></i> Spending exceeds your budget!
+                        {% else %}
+                        <i class="bi bi-exclamation-circle me-1"></i> You've used 80%+ of your budget. Consider reducing spending.
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    <div class="progress" style="height: 25px;">
+                        {% widthratio budget_spent budget_amount 100 as pct %}
+                        <div class="progress-bar {% if budget_alert == 'danger' %}bg-danger{% elif budget_alert == 'warning' %}bg-warning{% else %}bg-primary{% endif %}" 
+                             role="progressbar" style="width: {% if pct > 100 %}100{% else %}{{ pct }}{% endif %}%;" 
+                             aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100">
+                            {% if pct > 15 %}{{ pct|floatformat:0 }}%{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-piggy-bank text-muted display-4 mb-2"></i>
+                    <p class="text-muted mb-2">Set a monthly budget to track your spending goals.</p>
+                    <a href="{% url 'set_budget' %}" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i> Set Budget</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if predicted_expense is not None %}
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow h-100 border-info">
+                <div class="card-body">
+                    <h6 class="text-uppercase text-info mb-2"><i class="bi bi-graph-up-arrow me-1"></i>Predicted Next Month</h6>
+                    <div class="h4 mb-0 font-weight-bold">₹{{ predicted_expense|floatformat:2 }}</div>
+                    <small class="text-muted">Based on Linear Regression of historical expenses</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Charts Row 1: Pie & Monthly Trend -->
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Expense Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="position: relative; height: 300px;">
+                        <canvas id="expensePieChart"></canvas>
+                    </div>
+                    {% if not has_chart_data %}
+                    <p class="text-muted text-center mt-4">Add expenses to see the distribution chart.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Monthly Expense Trend</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="position: relative; height: 300px;">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                    {% if not has_trend_data %}
+                    <p class="text-muted text-center mt-4">Add expenses to see the monthly trend.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 2: Income vs Expense & Balance Trend -->
+    {% if has_income_vs_data %}
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Income vs Expense vs EMI</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="position: relative; height: 280px;">
+                        <canvas id="incomeVsExpenseChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Balance Trend</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="position: relative; height: 280px;">
+                        <canvas id="balanceTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- AI Insights -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="bi bi-robot me-2"></i>AI Spending Insights
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if insights %}
+                    {% for insight in insights %}
+                    <div class="alert insight-card alert-light mb-2" role="alert">
+                        <i class="bi bi-lightbulb text-warning me-2"></i> {{ insight }}
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted mb-0">Add transactions to receive AI-powered spending insights.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% if has_chart_data %}
+    const pieCtx = document.getElementById('expensePieChart');
+    if (pieCtx) {
+        new Chart(pieCtx, {
+            type: 'pie',
+            data: {
+                labels: {{ chart_labels|safe }},
+                datasets: [{
+                    data: {{ chart_data|safe }},
+                    backgroundColor: {{ chart_colors|safe }},
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }
+    {% endif %}
+
+    {% if has_trend_data %}
+    const trendCtx = document.getElementById('trendChart');
+    if (trendCtx) {
+        new Chart(trendCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ trend_labels|safe }},
+                datasets: [{
+                    label: 'Expense (₹)',
+                    data: {{ trend_data|safe }},
+                    backgroundColor: 'rgba(78, 115, 223, 0.6)',
+                    borderColor: 'rgba(78, 115, 223, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+    {% endif %}
+
+    {% if has_income_vs_data %}
+    const incomeVsCtx = document.getElementById('incomeVsExpenseChart');
+    if (incomeVsCtx) {
+        new Chart(incomeVsCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ income_vs_labels|safe }},
+                datasets: [
+                    { label: 'Income', data: {{ income_vs_income|safe }}, backgroundColor: 'rgba(28, 200, 138, 0.7)', borderColor: 'rgba(28, 200, 138, 1)', borderWidth: 1 },
+                    { label: 'Expense', data: {{ income_vs_expense|safe }}, backgroundColor: 'rgba(231, 74, 59, 0.7)', borderColor: 'rgba(231, 74, 59, 1)', borderWidth: 1 },
+                    { label: 'EMI (monthly)', data: {{ income_vs_emi|safe }}, backgroundColor: 'rgba(246, 194, 62, 0.7)', borderColor: 'rgba(246, 194, 62, 1)', borderWidth: 1 },
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } },
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }
+    const balanceCtx = document.getElementById('balanceTrendChart');
+    if (balanceCtx) {
+        new Chart(balanceCtx, {
+            type: 'line',
+            data: {
+                labels: {{ balance_labels|safe }},
+                datasets: [{
+                    label: 'Balance (₹)',
+                    data: {{ balance_data|safe }},
+                    borderColor: 'rgba(78, 115, 223, 1)',
+                    backgroundColor: 'rgba(78, 115, 223, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+    {% endif %}
+});
+</script>
+{% endblock %}
