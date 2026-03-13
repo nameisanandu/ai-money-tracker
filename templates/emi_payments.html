@@ -10,6 +10,25 @@
         </a>
     </div>
 
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <div class="card shadow h-100 {% if overdue_count %}border-danger{% endif %}">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small mb-1">Overdue EMIs</div>
+                    <div class="h4 mb-0">{{ overdue_count }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card shadow h-100 {% if due_soon_count %}border-warning{% endif %}">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small mb-1">Due In Next 7 Days</div>
+                    <div class="h4 mb-0">{{ due_soon_count }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="card shadow">
         <div class="card-body p-0">
             {% if payments %}
@@ -19,7 +38,9 @@
                         <tr>
                             <th>Date</th>
                             <th>Loan</th>
-                            <th class="text-end">EMI Amount (₹)</th>
+                            <th class="text-end">EMI Amount (Rs)</th>
+                            <th class="text-end">Paid (Rs)</th>
+                            <th class="text-end">Remaining (Rs)</th>
                             <th class="text-center">Status</th>
                             <th class="text-center">Action</th>
                         </tr>
@@ -29,25 +50,37 @@
                         <tr>
                             <td>{{ e.payment_date|date:"M d, Y" }}</td>
                             <td>{{ e.loan.loan_name }}</td>
-                            <td class="text-end">₹{{ e.amount|floatformat:2 }}</td>
+                            <td class="text-end">Rs {{ e.amount|floatformat:2 }}</td>
+                            <td class="text-end">Rs {{ e.paid_amount|floatformat:2 }}</td>
+                            <td class="text-end">Rs {{ e.remaining_due|floatformat:2 }}</td>
                             <td class="text-center">
                                 {% if e.status == 'paid' %}
                                 <span class="badge bg-success">Paid</span>
+                                {% elif e.status == 'partial' %}
+                                <span class="badge bg-info text-dark">Partial</span>
+                                {% elif e.is_overdue %}
+                                <span class="badge bg-danger">Overdue</span>
+                                {% elif e.is_due_soon %}
+                                <span class="badge bg-warning text-dark">Due Soon</span>
                                 {% else %}
-                                <span class="badge bg-warning text-dark">Pending</span>
+                                <span class="badge bg-secondary">Upcoming</span>
                                 {% endif %}
                             </td>
                             <td class="text-center">
-                                {% if e.status == 'pending' %}
-                                <form method="post" action="{% url 'mark_emi_paid' e.pk %}" class="d-inline">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-check-lg me-1"></i> Mark Paid
-                                    </button>
-                                </form>
-                                {% else %}
-                                <span class="text-muted small">—</span>
-                                {% endif %}
+                                <div class="d-flex justify-content-center gap-2">
+                                    <a href="{% url 'edit_emi_payment' e.pk %}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    {% if e.status != 'paid' %}
+                                    <form method="post" action="{% url 'mark_emi_paid' e.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{{ request.path }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -64,4 +97,3 @@
     </div>
 </div>
 {% endblock %}
-

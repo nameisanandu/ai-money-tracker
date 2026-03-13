@@ -6,6 +6,7 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Sum, Q
+from django.db import transaction as db_transaction
 from django.core.paginator import Paginator
 from django.http import HttpResponse
 from django.utils import timezone
@@ -15,11 +16,14 @@ from decimal import Decimal
 import csv
 import io
 import json
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import calendar
 
 from .models import Transaction, Category, MonthlyBudget, Loan, EMIPayment
-from .forms import RegisterForm, TransactionForm, MonthlyBudgetForm, TransactionImportForm, LoanForm
+from .forms import (
+    RegisterForm, TransactionForm, MonthlyBudgetForm, TransactionImportForm,
+    LoanForm, EMIPaymentForm, ExtraPaymentForm,
+)
 from .ai_analyzer import get_financial_insights
 from .expense_predictor import predict_next_month_expense
 
@@ -123,7 +127,7 @@ def dashboard(request):
     )
 
     # Loans & EMI stats
-    user_loans = Loan.objects.filter(user=request.user)
+    user_loans = Loan.objects.filter(user=request.user).prefetch_related('emi_payments')
     total_monthly_emi = sum(l.emi_amount for l in user_loans if l.remaining_emis() > 0)
     loan_progress_list = [
         {
@@ -131,6 +135,7 @@ def dashboard(request):
             'paid_pct': round(loan.paid_percentage(), 1),
             'remaining_balance': loan.remaining_balance(),
             'remaining_emis': loan.remaining_emis(),
+            'status': loan.status_label,
         }
         for loan in user_loans
     ]
@@ -259,12 +264,84 @@ def _add_months(d, months):
     return date(year, month, day)
 
 
+def _sync_emi_status(emi):
+    """Normalize EMI status based on scheduled vs paid amount."""
+    if emi.paid_amount >= emi.amount:
+        emi.paid_amount = emi.amount
+        emi.status = EMIPayment.STATUS_PAID
+    elif emi.paid_amount > 0:
+        emi.status = EMIPayment.STATUS_PARTIAL
+    else:
+        emi.paid_amount = 0
+        emi.status = EMIPayment.STATUS_PENDING
+
+
+def _record_loan_payment(user, amount, payment_date, loan_name, description):
+    """Create an expense transaction for a loan payment delta."""
+    if amount <= 0:
+        return
+    category, _ = Category.objects.get_or_create(name='Loan EMI')
+    Transaction.objects.create(
+        user=user,
+        amount=amount,
+        category=category,
+        type='expense',
+        description=description or f"Payment for {loan_name}",
+        date=payment_date,
+    )
+
+
+def _rebuild_pending_emi_schedule(loan):
+    """Regenerate only unpaid future EMI rows after loan terms change."""
+    preserved_payments = list(
+        loan.emi_payments.exclude(status=EMIPayment.STATUS_PENDING).order_by('payment_date', 'id')
+    )
+    loan.emi_payments.filter(status=EMIPayment.STATUS_PENDING).delete()
+
+    start_index = len(preserved_payments)
+    for idx in range(start_index, loan.tenure_months):
+        EMIPayment.objects.create(
+            loan=loan,
+            amount=loan.emi_amount,
+            payment_date=_add_months(loan.start_date, idx),
+            paid_amount=0,
+            status=EMIPayment.STATUS_PENDING,
+        )
+
+
+def _apply_extra_payment_to_loan(loan, amount):
+    """Apply a payment amount across the oldest unpaid EMIs."""
+    remaining_amount = amount
+    touched = 0
+    for emi in loan.emi_payments.exclude(status=EMIPayment.STATUS_PAID).order_by('payment_date', 'id'):
+        if remaining_amount <= 0:
+            break
+        remaining_due = emi.remaining_due
+        if remaining_due <= 0:
+            continue
+        applied = min(remaining_due, remaining_amount)
+        emi.paid_amount += applied
+        _sync_emi_status(emi)
+        emi.save(update_fields=['paid_amount', 'status'])
+        remaining_amount -= applied
+        touched += 1
+    return amount - remaining_amount, touched
+
+
 @login_required
 def loan_list(request):
     """List all loans for the current user."""
     loans = Loan.objects.filter(user=request.user).prefetch_related('emi_payments')
+    total_remaining_balance = sum(loan.remaining_balance() for loan in loans)
+    active_loans = sum(1 for loan in loans if loan.remaining_emis() > 0)
+    overdue_loans = sum(1 for loan in loans if loan.overdue_emis() > 0)
+    due_soon_count = sum(loan.upcoming_emis(days=7).count() for loan in loans)
     context = {
         'loans': loans,
+        'total_remaining_balance': total_remaining_balance,
+        'active_loans': active_loans,
+        'overdue_loans': overdue_loans,
+        'due_soon_count': due_soon_count,
     }
     return render(request, 'loan_list.html', context)
 
@@ -291,15 +368,69 @@ def add_loan(request):
             return redirect('loan_list')
         messages.error(request, 'Please correct the errors below.')
     else:
-        form = LoanForm()
+        form = LoanForm(initial={'start_date': timezone.localdate()})
     return render(request, 'add_loan.html', {'form': form})
+
+
+@login_required
+def edit_loan(request, pk):
+    """Edit an existing loan and refresh unpaid schedule if terms changed."""
+    loan = get_object_or_404(Loan.objects.prefetch_related('emi_payments'), pk=pk, user=request.user)
+    if request.method == 'POST':
+        original_values = {
+            'start_date': loan.start_date,
+            'tenure_months': loan.tenure_months,
+            'emi_amount': loan.emi_amount,
+        }
+        form = LoanForm(request.POST, instance=loan)
+        if form.is_valid():
+            with db_transaction.atomic():
+                loan = form.save()
+                schedule_changed = any(
+                    getattr(loan, key) != original_values[key]
+                    for key in original_values
+                )
+                if schedule_changed:
+                    _rebuild_pending_emi_schedule(loan)
+            if schedule_changed:
+                messages.success(request, 'Loan updated. Unpaid EMI schedule was refreshed.')
+            else:
+                messages.success(request, 'Loan details updated successfully.')
+            return redirect('loan_detail', pk=loan.pk)
+        messages.error(request, 'Please correct the errors below.')
+    else:
+        form = LoanForm(instance=loan)
+    return render(request, 'edit_loan.html', {'form': form, 'loan': loan})
+
+
+@login_required
+def delete_loan(request, pk):
+    """Delete a loan and all its EMI records."""
+    loan = get_object_or_404(Loan, pk=pk, user=request.user)
+    if request.method == 'POST':
+        loan_name = loan.loan_name
+        loan.delete()
+        messages.success(request, f'{loan_name} was deleted successfully.')
+        return redirect('loan_list')
+    return render(request, 'delete_loan.html', {'loan': loan})
 
 
 @login_required
 def loan_detail(request, pk):
     """Show details and progress for a single loan."""
-    loan = get_object_or_404(Loan, pk=pk, user=request.user)
+    loan = get_object_or_404(
+        Loan.objects.prefetch_related('emi_payments'),
+        pk=pk,
+        user=request.user,
+    )
     emis = loan.emi_payments.all().order_by('payment_date')
+    overdue_emis = emis.filter(status=EMIPayment.STATUS_PENDING, payment_date__lt=timezone.localdate())
+    upcoming_emis = emis.filter(
+        status=EMIPayment.STATUS_PENDING,
+        payment_date__gte=timezone.localdate(),
+        payment_date__lte=timezone.localdate() + timedelta(days=30),
+    )
+    next_emi = loan.next_emi()
     total_paid = loan.total_paid
     remaining_balance = loan.remaining_balance()
     remaining_emis = loan.remaining_emis()
@@ -309,6 +440,10 @@ def loan_detail(request, pk):
         'total_paid': total_paid,
         'remaining_balance': remaining_balance,
         'remaining_emis': remaining_emis,
+        'overdue_emis': overdue_emis,
+        'upcoming_emis': upcoming_emis,
+        'next_emi': next_emi,
+        'extra_payment_form': ExtraPaymentForm(loan=loan),
     }
     return render(request, 'loan_detail.html', context)
 
@@ -316,11 +451,80 @@ def loan_detail(request, pk):
 @login_required
 def emi_payments(request):
     """List EMI payments across all loans."""
-    payments = EMIPayment.objects.filter(loan__user=request.user).select_related('loan')
+    payments = list(
+        EMIPayment.objects.filter(loan__user=request.user)
+        .select_related('loan')
+        .order_by('payment_date', 'loan__loan_name')
+    )
+    payments.sort(key=lambda payment: (payment.status == EMIPayment.STATUS_PAID, payment.payment_date))
+    overdue_count = sum(1 for payment in payments if payment.is_overdue)
+    due_soon_count = sum(1 for payment in payments if payment.is_due_soon)
     context = {
         'payments': payments,
+        'overdue_count': overdue_count,
+        'due_soon_count': due_soon_count,
     }
     return render(request, 'emi_payments.html', context)
+
+
+@login_required
+def edit_emi_payment(request, pk):
+    """Edit a scheduled EMI entry."""
+    emi = get_object_or_404(EMIPayment.objects.select_related('loan'), pk=pk, loan__user=request.user)
+    old_paid_amount = emi.paid_amount
+    if request.method == 'POST':
+        form = EMIPaymentForm(request.POST, instance=emi)
+        if form.is_valid():
+            emi = form.save(commit=False)
+            _sync_emi_status(emi)
+            emi.save()
+            payment_delta = emi.paid_amount - old_paid_amount
+            if payment_delta > 0:
+                _record_loan_payment(
+                    request.user,
+                    payment_delta,
+                    emi.payment_date,
+                    emi.loan.loan_name,
+                    f"Manual EMI update for {emi.loan.loan_name}",
+                )
+            elif payment_delta < 0:
+                messages.warning(request, 'Paid amount was reduced. Existing expense records were not reversed automatically.')
+            messages.success(request, 'EMI details updated successfully.')
+            return redirect('loan_detail', pk=emi.loan.pk)
+        messages.error(request, 'Please correct the errors below.')
+    else:
+        form = EMIPaymentForm(instance=emi)
+    return render(request, 'edit_emi_payment.html', {'form': form, 'emi': emi})
+
+
+@login_required
+def add_extra_payment(request, pk):
+    """Apply an extra payment across the oldest unpaid EMIs for a loan."""
+    loan = get_object_or_404(Loan.objects.prefetch_related('emi_payments'), pk=pk, user=request.user)
+    if request.method == 'POST':
+        form = ExtraPaymentForm(request.POST, loan=loan)
+        if form.is_valid():
+            amount = form.cleaned_data['amount']
+            payment_date = form.cleaned_data['payment_date']
+            description = form.cleaned_data['description'].strip()
+            with db_transaction.atomic():
+                applied_amount, touched = _apply_extra_payment_to_loan(loan, amount)
+                _record_loan_payment(
+                    request.user,
+                    applied_amount,
+                    payment_date,
+                    loan.loan_name,
+                    description or f"Extra payment for {loan.loan_name}",
+                )
+            messages.success(
+                request,
+                f'Applied Rs {applied_amount:,.2f} across {touched} EMI(s) for {loan.loan_name}.',
+            )
+            return redirect('loan_detail', pk=loan.pk)
+        messages.error(request, 'Please correct the errors below.')
+    else:
+        form = ExtraPaymentForm(loan=loan)
+    return render(request, 'extra_payment.html', {'form': form, 'loan': loan})
 
 
 @login_required
@@ -329,20 +533,23 @@ def mark_emi_paid(request, pk):
     emi = get_object_or_404(EMIPayment, pk=pk, loan__user=request.user)
     if request.method == 'POST':
         if emi.status != EMIPayment.STATUS_PAID:
+            payment_delta = emi.remaining_due
+            emi.paid_amount = emi.amount
             emi.status = EMIPayment.STATUS_PAID
-            emi.save()
-            category, _ = Category.objects.get_or_create(name='Loan EMI')
-            Transaction.objects.create(
-                user=request.user,
-                amount=emi.amount,
-                category=category,
-                type='expense',
-                description=f"EMI payment for {emi.loan.loan_name}",
-                date=emi.payment_date,
+            emi.save(update_fields=['paid_amount', 'status'])
+            _record_loan_payment(
+                request.user,
+                payment_delta,
+                emi.payment_date,
+                emi.loan.loan_name,
+                f"EMI payment for {emi.loan.loan_name}",
             )
             messages.success(request, 'EMI marked as paid and expense recorded.')
         else:
             messages.info(request, 'This EMI is already marked as paid.')
+    next_url = request.POST.get('next')
+    if next_url:
+        return redirect(next_url)
     return redirect('emi_payments')
 
 

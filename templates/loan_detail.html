@@ -5,38 +5,64 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0"><i class="bi bi-bank me-2"></i>{{ loan.loan_name }}</h1>
-        <a href="{% url 'loan_list' %}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i> Back to Loans
-        </a>
+        <div class="d-flex gap-2">
+            <a href="{% url 'add_extra_payment' loan.pk %}" class="btn btn-primary">
+                <i class="bi bi-cash-stack me-1"></i> Extra Payment
+            </a>
+            <a href="{% url 'edit_loan' loan.pk %}" class="btn btn-outline-secondary">
+                <i class="bi bi-pencil me-1"></i> Edit Loan
+            </a>
+            <a href="{% url 'loan_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Back to Loans
+            </a>
+        </div>
     </div>
 
     <div class="row mb-4">
-        <div class="col-md-4 mb-3">
+        <div class="col-lg-4 col-md-6 mb-3">
             <div class="card shadow h-100">
                 <div class="card-body">
                     <h6 class="text-muted text-uppercase mb-2">Loan Summary</h6>
-                    <p class="mb-1"><strong>Total Amount:</strong> ₹{{ loan.total_amount|floatformat:2 }}</p>
+                    <p class="mb-1"><strong>Total Amount:</strong> Rs {{ loan.total_amount|floatformat:2 }}</p>
                     <p class="mb-1"><strong>Interest Rate:</strong> {{ loan.interest_rate }}%</p>
                     <p class="mb-1"><strong>Tenure:</strong> {{ loan.tenure_months }} months</p>
-                    <p class="mb-1"><strong>EMI Amount:</strong> ₹{{ loan.emi_amount|floatformat:2 }}</p>
-                    <p class="mb-0"><strong>Start Date:</strong> {{ loan.start_date|date:"M d, Y" }}</p>
+                    <p class="mb-1"><strong>EMI Amount:</strong> Rs {{ loan.emi_amount|floatformat:2 }}</p>
+                    <p class="mb-0"><strong>Expected Close:</strong> {{ loan.completion_date|date:"M d, Y" }}</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-lg-4 col-md-6 mb-3">
             <div class="card shadow h-100">
                 <div class="card-body">
                     <h6 class="text-muted text-uppercase mb-2">Progress</h6>
                     {% with pct=loan.paid_percentage %}
-                    <p class="mb-1"><strong>Total Paid:</strong> ₹{{ total_paid|floatformat:2 }}</p>
-                    <p class="mb-1"><strong>Remaining Balance:</strong> ₹{{ remaining_balance|floatformat:2 }}</p>
+                    <p class="mb-1"><strong>Total Paid:</strong> Rs {{ total_paid|floatformat:2 }}</p>
+                    <p class="mb-1"><strong>Remaining Balance:</strong> Rs {{ remaining_balance|floatformat:2 }}</p>
                     <p class="mb-1"><strong>Remaining EMIs:</strong> {{ remaining_emis }}</p>
+                    <p class="mb-1"><strong>Status:</strong> {{ loan.status_label }}</p>
                     <div class="progress mt-2" style="height: 22px;">
                         <div class="progress-bar bg-success" role="progressbar" style="width: {{ pct|floatformat:0 }}%;" aria-valuenow="{{ pct|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100">
                             {{ pct|floatformat:0 }}% paid
                         </div>
                     </div>
                     {% endwith %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 mb-3">
+            <div class="card shadow h-100 {% if overdue_emis %}border-danger{% elif next_emi %}border-warning{% endif %}">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase mb-2">Next Action</h6>
+                    {% if overdue_emis %}
+                    <p class="mb-1"><strong>{{ overdue_emis|length }}</strong> EMI(s) are overdue.</p>
+                    <p class="mb-0 text-danger">Clear overdue payments first to bring this loan back on track.</p>
+                    {% elif next_emi %}
+                    <p class="mb-1"><strong>Next EMI:</strong> {{ next_emi.payment_date|date:"M d, Y" }}</p>
+                    <p class="mb-1"><strong>Amount:</strong> Rs {{ next_emi.amount|floatformat:2 }}</p>
+                    <p class="mb-0 text-muted">You have {{ upcoming_emis|length }} EMI(s) due in the next 30 days.</p>
+                    {% else %}
+                    <p class="mb-0 text-success">This loan is fully paid.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -55,21 +81,48 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>Date</th>
-                                    <th class="text-end">Amount (₹)</th>
+                                    <th class="text-end">Amount (Rs)</th>
+                                    <th class="text-end">Paid (Rs)</th>
+                                    <th class="text-end">Remaining (Rs)</th>
                                     <th class="text-center">Status</th>
+                                    <th class="text-center">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for e in emis %}
                                 <tr>
                                     <td>{{ e.payment_date|date:"M d, Y" }}</td>
-                                    <td class="text-end">₹{{ e.amount|floatformat:2 }}</td>
+                                    <td class="text-end">Rs {{ e.amount|floatformat:2 }}</td>
+                                    <td class="text-end">Rs {{ e.paid_amount|floatformat:2 }}</td>
+                                    <td class="text-end">Rs {{ e.remaining_due|floatformat:2 }}</td>
                                     <td class="text-center">
                                         {% if e.status == 'paid' %}
                                         <span class="badge bg-success">Paid</span>
+                                        {% elif e.status == 'partial' %}
+                                        <span class="badge bg-info text-dark">Partial</span>
+                                        {% elif e.is_overdue %}
+                                        <span class="badge bg-danger">Overdue</span>
+                                        {% elif e.is_due_soon %}
+                                        <span class="badge bg-warning text-dark">Due Soon</span>
                                         {% else %}
-                                        <span class="badge bg-warning text-dark">Pending</span>
+                                        <span class="badge bg-secondary">Upcoming</span>
                                         {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex justify-content-center gap-2">
+                                            <a href="{% url 'edit_emi_payment' e.pk %}" class="btn btn-sm btn-outline-secondary">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            {% if e.status != 'paid' %}
+                                            <form method="post" action="{% url 'mark_emi_paid' e.pk %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="next" value="{{ request.path }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-check-lg"></i>
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                        </div>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -87,4 +140,3 @@
     </div>
 </div>
 {% endblock %}
-

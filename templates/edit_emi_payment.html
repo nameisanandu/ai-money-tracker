@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Edit EMI - AI Money Tracker{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0"><i class="bi bi-pencil-square me-2"></i>Edit EMI</h1>
+        <a href="{% url 'loan_detail' emi.loan.pk %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to Loan
+        </a>
+    </div>
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="alert alert-light border mb-4">
+                        Loan: <strong>{{ emi.loan.loan_name }}</strong><br>
+                        Current due date: {{ emi.payment_date|date:"M d, Y" }}
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                        {% endif %}
+                        <div class="mb-3">
+                            <label for="id_payment_date" class="form-label">EMI Date</label>
+                            {{ form.payment_date }}
+                            {% if form.payment_date.errors %}<div class="invalid-feedback d-block">{{ form.payment_date.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_amount" class="form-label">Scheduled Amount (Rs)</label>
+                            {{ form.amount }}
+                            {% if form.amount.errors %}<div class="invalid-feedback d-block">{{ form.amount.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_paid_amount" class="form-label">Paid Amount (Rs)</label>
+                            {{ form.paid_amount }}
+                            {% if form.paid_amount.errors %}<div class="invalid-feedback d-block">{{ form.paid_amount.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_status" class="form-label">Status</label>
+                            {{ form.status }}
+                            {% if form.status.errors %}<div class="invalid-feedback d-block">{{ form.status.errors.0 }}</div>{% endif %}
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i> Save EMI
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

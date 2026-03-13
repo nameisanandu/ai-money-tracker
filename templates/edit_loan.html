@@ -1,16 +1,21 @@
 {% extends "base.html" %}
-{% block title %}Add Loan - AI Money Tracker{% endblock %}
+{% block title %}Edit Loan - AI Money Tracker{% endblock %}
 
 {% block content %}
 <div class="container">
-    <h1 class="h3 mb-4"><i class="bi bi-bank me-2"></i>Add Loan</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0"><i class="bi bi-pencil-square me-2"></i>Edit Loan</h1>
+        <a href="{% url 'loan_detail' loan.pk %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to Loan
+        </a>
+    </div>
     <div class="row justify-content-center">
         <div class="col-lg-7">
             <div class="card shadow">
                 <div class="card-body">
                     <div class="alert alert-light border mb-4" role="alert">
-                        You can either enter both EMI and interest rate manually, auto-calculate EMI from amount, rate,
-                        and tenure, or auto-calculate interest rate from amount, tenure, and EMI.
+                        You can manually enter EMI and interest rate, auto-calculate EMI, or auto-calculate interest rate.
+                        If tenure, start date, or EMI changes, only unpaid EMI rows are rebuilt.
                     </div>
                     <form method="post">
                         {% csrf_token %}
@@ -20,23 +25,17 @@
                         <div class="mb-3">
                             <label for="id_loan_name" class="form-label">Loan Name</label>
                             {{ form.loan_name }}
-                            {% if form.loan_name.errors %}
-                            <div class="invalid-feedback d-block">{{ form.loan_name.errors.0 }}</div>
-                            {% endif %}
+                            {% if form.loan_name.errors %}<div class="invalid-feedback d-block">{{ form.loan_name.errors.0 }}</div>{% endif %}
                         </div>
                         <div class="mb-3">
                             <label for="id_total_amount" class="form-label">Total Amount (Rs)</label>
                             {{ form.total_amount }}
-                            {% if form.total_amount.errors %}
-                            <div class="invalid-feedback d-block">{{ form.total_amount.errors.0 }}</div>
-                            {% endif %}
+                            {% if form.total_amount.errors %}<div class="invalid-feedback d-block">{{ form.total_amount.errors.0 }}</div>{% endif %}
                         </div>
                         <div class="mb-3">
                             <label for="id_tenure_months" class="form-label">Tenure (months)</label>
                             {{ form.tenure_months }}
-                            {% if form.tenure_months.errors %}
-                            <div class="invalid-feedback d-block">{{ form.tenure_months.errors.0 }}</div>
-                            {% endif %}
+                            {% if form.tenure_months.errors %}<div class="invalid-feedback d-block">{{ form.tenure_months.errors.0 }}</div>{% endif %}
                         </div>
                         <div class="form-check form-switch mb-2">
                             {{ form.auto_calculate_emi }}
@@ -49,33 +48,29 @@
                         <div class="mb-3">
                             <label for="id_interest_rate" class="form-label">Interest Rate (% p.a.)</label>
                             {{ form.interest_rate }}
-                            {% if form.interest_rate.errors %}
-                            <div class="invalid-feedback d-block">{{ form.interest_rate.errors.0 }}</div>
-                            {% endif %}
+                            {% if form.interest_rate.errors %}<div class="invalid-feedback d-block">{{ form.interest_rate.errors.0 }}</div>{% endif %}
                             <small class="form-text text-muted">{{ form.interest_rate.help_text }}</small>
                             <div id="interestPreview" class="small text-primary mt-2"></div>
                         </div>
                         <div class="mb-3">
                             <label for="id_emi_amount" class="form-label">EMI Amount (Rs)</label>
                             {{ form.emi_amount }}
-                            {% if form.emi_amount.errors %}
-                            <div class="invalid-feedback d-block">{{ form.emi_amount.errors.0 }}</div>
-                            {% endif %}
+                            {% if form.emi_amount.errors %}<div class="invalid-feedback d-block">{{ form.emi_amount.errors.0 }}</div>{% endif %}
                             <small class="form-text text-muted">{{ form.emi_amount.help_text }}</small>
                             <div id="emiPreview" class="small text-primary mt-2"></div>
                         </div>
                         <div class="mb-3">
                             <label for="id_start_date" class="form-label">Start Date</label>
                             {{ form.start_date }}
-                            {% if form.start_date.errors %}
-                            <div class="invalid-feedback d-block">{{ form.start_date.errors.0 }}</div>
-                            {% endif %}
+                            {% if form.start_date.errors %}<div class="invalid-feedback d-block">{{ form.start_date.errors.0 }}</div>{% endif %}
                         </div>
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-1"></i> Save Loan
+                                <i class="bi bi-check-lg me-1"></i> Save Changes
                             </button>
-                            <a href="{% url 'loan_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                            <a href="{% url 'delete_loan' loan.pk %}" class="btn btn-outline-danger">
+                                <i class="bi bi-trash me-1"></i> Delete Loan
+                            </a>
                         </div>
                     </form>
                 </div>

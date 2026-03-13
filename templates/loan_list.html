@@ -5,9 +5,41 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0"><i class="bi bi-bank me-2"></i>Loans</h1>
-        <a href="{% url 'add_loan' %}" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-1"></i> Add Loan
-        </a>
+        <div class="d-flex gap-2">
+            <a href="{% url 'emi_payments' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-cash-coin me-1"></i> EMI Payments
+            </a>
+            <a href="{% url 'add_loan' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i> Add Loan
+            </a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card shadow h-100">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small mb-1">Active Loans</div>
+                    <div class="h4 mb-0">{{ active_loans }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card shadow h-100 border-warning">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small mb-1">Needs Attention</div>
+                    <div class="h4 mb-0">{{ overdue_loans }} overdue, {{ due_soon_count }} due this week</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card shadow h-100">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small mb-1">Remaining To Pay</div>
+                    <div class="h4 mb-0">Rs {{ total_remaining_balance|floatformat:2 }}</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="card shadow">
@@ -18,9 +50,9 @@
                     <thead class="table-light">
                         <tr>
                             <th>Loan</th>
-                            <th class="text-end">Total Amount (₹)</th>
-                            <th class="text-end">EMI (₹)</th>
-                            <th class="text-end">Remaining Balance (₹)</th>
+                            <th class="text-end">Total Amount (Rs)</th>
+                            <th class="text-end">EMI (Rs)</th>
+                            <th class="text-end">Remaining Balance (Rs)</th>
                             <th class="text-center">Remaining EMIs</th>
                             <th style="width: 220px;">Progress</th>
                             <th class="text-center"></th>
@@ -31,11 +63,25 @@
                         <tr>
                             <td>
                                 <strong>{{ loan.loan_name }}</strong><br>
-                                <small class="text-muted">Rate: {{ loan.interest_rate }}% • Tenure: {{ loan.tenure_months }} months</small>
+                                <small class="text-muted">Rate: {{ loan.interest_rate }}% | Tenure: {{ loan.tenure_months }} months</small><br>
+                                <small>
+                                    {% if loan.status_label == 'Overdue' %}
+                                    <span class="badge bg-danger">Overdue</span>
+                                    {% elif loan.status_label == 'Due Soon' %}
+                                    <span class="badge bg-warning text-dark">Due Soon</span>
+                                    {% elif loan.status_label == 'Closed' %}
+                                    <span class="badge bg-success">Closed</span>
+                                    {% else %}
+                                    <span class="badge bg-primary">On Track</span>
+                                    {% endif %}
+                                    {% if loan.next_emi %}
+                                    <span class="text-muted ms-1">Next due {{ loan.next_emi.payment_date|date:"M d, Y" }}</span>
+                                    {% endif %}
+                                </small>
                             </td>
-                            <td class="text-end">₹{{ loan.total_amount|floatformat:2 }}</td>
-                            <td class="text-end">₹{{ loan.emi_amount|floatformat:2 }}</td>
-                            <td class="text-end">₹{{ loan.remaining_balance|floatformat:2 }}</td>
+                            <td class="text-end">Rs {{ loan.total_amount|floatformat:2 }}</td>
+                            <td class="text-end">Rs {{ loan.emi_amount|floatformat:2 }}</td>
+                            <td class="text-end">Rs {{ loan.remaining_balance|floatformat:2 }}</td>
                             <td class="text-center">{{ loan.remaining_emis }}</td>
                             <td>
                                 {% with pct=loan.paid_percentage %}
@@ -47,9 +93,14 @@
                                 {% endwith %}
                             </td>
                             <td class="text-center">
-                                <a href="{% url 'loan_detail' loan.pk %}" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-eye"></i> View
-                                </a>
+                                <div class="d-flex justify-content-center gap-2">
+                                    <a href="{% url 'loan_detail' loan.pk %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
+                                    <a href="{% url 'edit_loan' loan.pk %}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -66,4 +117,3 @@
     </div>
 </div>
 {% endblock %}
-

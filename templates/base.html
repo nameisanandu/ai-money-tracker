@@ -61,7 +61,7 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if request.resolver_match.url_name in 'loan_list, add_loan, loan_detail, emi_payments' %}active{% endif %}" href="{% url 'loan_list' %}">
+                    <a class="nav-link {% if request.resolver_match.url_name in 'loan_list, add_loan, edit_loan, delete_loan, loan_detail, emi_payments, edit_emi_payment, add_extra_payment' %}active{% endif %}" href="{% url 'loan_list' %}">
                         <i class="bi bi-bank me-2"></i> Loans
                     </a>
                 </li>

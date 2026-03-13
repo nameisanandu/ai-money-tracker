@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Extra Payment - AI Money Tracker{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0"><i class="bi bi-cash-stack me-2"></i>Extra Payment</h1>
+        <a href="{% url 'loan_detail' loan.pk %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to Loan
+        </a>
+    </div>
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="alert alert-light border mb-4">
+                        <strong>{{ loan.loan_name }}</strong><br>
+                        Remaining balance: Rs {{ loan.remaining_balance|floatformat:2 }}<br>
+                        This payment will be applied to the oldest unpaid EMI first.
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                        {% endif %}
+                        <div class="mb-3">
+                            <label for="id_amount" class="form-label">Payment Amount (Rs)</label>
+                            {{ form.amount }}
+                            {% if form.amount.errors %}<div class="invalid-feedback d-block">{{ form.amount.errors.0 }}</div>{% endif %}
+                            <small class="form-text text-muted">{{ form.amount.help_text }}</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_payment_date" class="form-label">Payment Date</label>
+                            {{ form.payment_date }}
+                            {% if form.payment_date.errors %}<div class="invalid-feedback d-block">{{ form.payment_date.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_description" class="form-label">Description</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}<div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>{% endif %}
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i> Apply Payment
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

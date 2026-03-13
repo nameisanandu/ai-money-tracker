@@ -1,26 +1,17 @@
+# Django
+db.sqlite3
+staticfiles/
+
 # Python
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
 
 # Virtual Environment
 venv/
-env/
-
-# Django
-db.sqlite3
-*.log
 
 # VS Code
 .vscode/
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
-
-# Migrations cache
-*/__pycache__/
-
-# Python env
-.env
