@@ -2,117 +2,56 @@
 {% block title %}Register - AI Money Tracker{% endblock %}
 
 {% block content %}
-
-<style>
-.register-bg{
-    min-height:100vh;
-    background: linear-gradient(135deg,#4e73df,#224abe);
-    display:flex;
-    align-items:center;
-}
-
-.register-card{
-    border-radius:15px;
-}
-
-.app-title{
-    font-weight:bold;
-    color:#4e73df;
-}
-</style>
-
-<div class="register-bg">
 <div class="container">
     <div class="row justify-content-center">
-
         <div class="col-md-6">
-
-            <div class="card shadow-lg register-card">
+            <div class="card shadow">
                 <div class="card-body p-5">
-
-                    <!-- Title -->
-                    <h2 class="text-center mb-2 app-title">
-                        <i class="bi bi-wallet2 text-primary me-2"></i>
-                        AI Money Tracker
+                    <h2 class="text-center mb-4">
+                        <i class="bi bi-wallet2 text-primary me-2"></i>AI Money Tracker
                     </h2>
-
-                    <p class="text-center text-muted mb-4">
-                        Create your account to start tracking your finances
-                    </p>
-
+                    <h5 class="text-center text-muted mb-4">Create your account</h5>
                     <form method="post">
-
                         {% csrf_token %}
-
-                        <!-- Username -->
                         <div class="mb-3">
                             <label for="id_username" class="form-label">Username</label>
                             {{ form.username }}
                             {% if form.username.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.username.errors.0 }}
-                                </div>
+                            <div class="invalid-feedback d-block">{{ form.username.errors.0 }}</div>
                             {% endif %}
                         </div>
-
-                        <!-- Email -->
                         <div class="mb-3">
                             <label for="id_email" class="form-label">Email</label>
                             {{ form.email }}
                             {% if form.email.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.email.errors.0 }}
-                                </div>
+                            <div class="invalid-feedback d-block">{{ form.email.errors.0 }}</div>
                             {% endif %}
                         </div>
-
-                        <!-- Password -->
                         <div class="mb-3">
                             <label for="id_password1" class="form-label">Password</label>
                             {{ form.password1 }}
                             {% if form.password1.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.password1.errors.0 }}
-                                </div>
+                            <div class="invalid-feedback d-block">{{ form.password1.errors.0 }}</div>
                             {% endif %}
-
-                            <small class="form-text text-muted">
-                                {{ form.password1.help_text }}
-                            </small>
+                            <small class="form-text text-muted">{{ form.password1.help_text }}</small>
                         </div>
-
-                        <!-- Confirm Password -->
                         <div class="mb-4">
                             <label for="id_password2" class="form-label">Confirm Password</label>
                             {{ form.password2 }}
                             {% if form.password2.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.password2.errors.0 }}
-                                </div>
+                            <div class="invalid-feedback d-block">{{ form.password2.errors.0 }}</div>
                             {% endif %}
                         </div>
-
-                        <!-- Register Button -->
-                        <button type="submit" class="btn btn-success btn-lg w-100 mb-3">
-                            <i class="bi bi-person-plus me-2"></i>
-                            Create Account
+                        <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
+                            <i class="bi bi-person-plus me-2"></i> Register
                         </button>
-
-                        <!-- Login Link -->
                         <p class="text-center mb-0 text-muted">
-                            Already have an account?
-                            <a href="{% url 'login' %}">Login here</a>
+                            Already have an account? <a href="{% url 'login' %}">Login here</a>
                         </p>
-
                     </form>
-
                 </div>
             </div>
-
         </div>
-
     </div>
 </div>
-</div>
-
 {% endblock %}
